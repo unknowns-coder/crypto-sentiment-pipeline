@@ -12,12 +12,14 @@ def get_sentiment_score(headlines_list, analyzer):
     total_weighted_score = 0.0
     for headline in headlines_list:
         result = analyzer(headline)[0]
-        label, confidence = result["label"], result["score"]
+        label = result["label"].lower()
+        confidence = result["score"]
 
-        if label == "POSITIVE":
+        if label == "positive":
             total_weighted_score += confidence
-        elif label == "NEGATIVE":
+        elif label == "negative":
             total_weighted_score -= confidence
+        # Neutral or unknown labels do not affect the mood score.
 
     avg_mood = total_weighted_score / len(headlines_list)
     if avg_mood > 0.05:

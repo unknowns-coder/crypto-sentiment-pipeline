@@ -26,5 +26,6 @@ An End-to-End Data Engineering project that scrapes BTC/USD data, stores it in P
    ```
 
 ## Notes
-- `main.py` now imports `get_market_data()` from `scraper.py` and `get_sentiment_score()` from `analysis.py`.
-- The pipeline avoids duplicated sentiment logic and improves error handling.
+- `main.py` now initializes the PostgreSQL table automatically before writing data.
+- The pipeline stores a unique `bundle_hash` and avoids duplicate inserts.
+- `analysis.py` now handles lowercase sentiment labels returned by `ProsusAI/finbert`.
