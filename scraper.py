@@ -1,48 +1,34 @@
 import requests
 from bs4 import BeautifulSoup
-import psycopg2
-import os
-from dotenv import load_dotenv
 
-load_dotenv()
+BINANCE_PRICE_URL = "https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT"
+GOOGLE_RSS_URL = (
+    "https://news.google.com/rss/search?q=bitcoin+when:1h&hl=en-US&gl=US&ceid=US:en"
+)
+HEADLINE_FALLBACK = ["Bitcoin market remains steady"]
+
 
 def get_market_data():
-    print("📡 Fetching live BTC price...")
-    price_res = requests.get("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT")
-    price = float(price_res.json()['price'])
-
-    print("📰 Scraping latest news headline...")
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
-    # Switching to a more stable news source for scraping
-    news_res = requests.get("https://cryptopanic.com/news/bitcoin/", headers=headers)
-    soup = BeautifulSoup(news_res.text, 'html.parser')
-    
-    # Looking for the news title class
-    headline_tag = soup.find('span', class_='title-text')
-    headline = headline_tag.get_text(strip=True) if headline_tag else "No headline found"
-    
-    return price, headline
-
-def save_to_cloud(price, headline):
     try:
-        conn = psycopg2.connect(os.getenv("DATABASE_URL"))
-        cur = conn.cursor()
-        
-        insert_query = """
-        INSERT INTO market_data (price, headline, source) 
-        VALUES (%s, %s, %s)
-        ON CONFLICT (headline) DO NOTHING;
-        """
-        cur.execute(insert_query, (price, headline, 'CoinDesk'))
-        
-        conn.commit()
-        print(f"✅ SUCCESS: Saved BTC @ ${price} | Headline: {headline[:50]}...")
-        
-        cur.close()
-        conn.close()
-    except Exception as e:
-        print(f"❌ DATABASE ERROR: {e}")
+        price_res = requests.get(BINANCE_PRICE_URL, timeout=10)
+        price_res.raise_for_status()
+        price = float(price_res.json().get("price", 0.0))
 
-if __name__ == "__main__":
-    btc_price, latest_news = get_market_data()
-    save_to_cloud(btc_price, latest_news)
+        rss_res = requests.get(GOOGLE_RSS_URL, timeout=10)
+        rss_res.raise_for_status()
+        soup = BeautifulSoup(rss_res.content, features="xml")
+
+        items = soup.find_all("item")[:5]
+        headlines = []
+        for item in items:
+            title = item.title.text if item.title else ""
+            if title:
+                headlines.append(title.split(" - ")[0].strip())
+
+        if not headlines:
+            headlines = HEADLINE_FALLBACK
+
+        return price, headlines
+    except Exception as exc:
+        print(f"❌ Scraper Error: {exc}")
+        return 0.0, []
