@@ -29,3 +29,4 @@ An End-to-End Data Engineering project that scrapes BTC/USD data, stores it in P
 - `main.py` now initializes the PostgreSQL table automatically before writing data.
 - The pipeline stores a unique `bundle_hash` and avoids duplicate inserts.
 - `analysis.py` now handles lowercase sentiment labels returned by `ProsusAI/finbert`.
+- This README change was saved and committed locally for verification.
